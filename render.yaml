@@ -1,0 +1,10 @@
+services:
+  - type: cron
+    name: doctor-scraper
+    runtime: python
+    schedule: "0 2 * * 0"   # Every Sunday at 2:00 AM UTC
+    buildCommand: pip install -r requirements.txt
+    startCommand: python run_scrapers.py
+    envVars:
+      - key: DATABASE_URL
+        sync: false          # Set manually in Render dashboard (never hardcoded)
