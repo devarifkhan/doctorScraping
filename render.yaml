@@ -4,8 +4,9 @@ services:
     runtime: python
     buildCommand: cd backend && pip install -r requirements.txt
     startCommand: cd backend && gunicorn server:app --bind 0.0.0.0:$PORT --workers 1 --threads 4 --timeout 3600
+    healthCheckPath: /api/health
     envVars:
-      - key: DATABASE_URL
-        sync: false          # Set manually in Render dashboard
+      - key: DOCTOR_DB_URL
+        sync: false          # Set manually in Render dashboard (Neon connection string)
       - key: ALLOWED_ORIGINS
         sync: false          # Set to your Vercel URL e.g. https://your-app.vercel.app
