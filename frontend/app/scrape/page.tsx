@@ -174,7 +174,7 @@ export default function ScrapePage() {
           {/* Log output */}
           <div
             ref={logBoxRef}
-            className="bg-gray-950 text-green-400 font-mono text-xs p-4 h-96 overflow-y-auto leading-relaxed"
+            className="bg-gray-950 text-green-400 font-mono text-xs p-4 h-[60vh] overflow-y-auto leading-relaxed"
           >
             {logs.length === 0 ? (
               <span className="text-gray-600">

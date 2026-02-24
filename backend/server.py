@@ -80,11 +80,12 @@ def scrape_stream():
                     yield f'data: ▶ Starting spider: {sp}\n\n'
 
                     proc = subprocess.Popen(
-                        [sys.executable, '-m', 'scrapy', 'crawl', sp],
+                        [sys.executable, '-u', '-m', 'scrapy', 'crawl', sp],
                         stdout=subprocess.PIPE,
                         stderr=subprocess.STDOUT,
                         text=True,
                         bufsize=1,
+                        env={**os.environ, 'PYTHONUNBUFFERED': '1'},
                     )
 
                     for line in proc.stdout:

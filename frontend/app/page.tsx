@@ -1,4 +1,4 @@
-import { neon } from '@neondatabase/serverless';
+import postgres from 'postgres';
 import { Suspense } from 'react';
 import Link from 'next/link';
 import DoctorCard from './components/DoctorCard';
@@ -27,7 +27,7 @@ interface Doctor {
 async function fetchDoctors(params: SearchParams) {
   const dbUrl = process.env.DOCTOR_DB_URL;
   if (!dbUrl) throw new Error('DOCTOR_DB_URL environment variable is not set.');
-  const sql = neon(dbUrl);
+  const sql = postgres(dbUrl, { ssl: 'require', prepare: false });
 
   const search    = params.search    ?? '';
   const specialty = params.specialty ?? '';

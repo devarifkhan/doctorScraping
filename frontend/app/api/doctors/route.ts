@@ -1,7 +1,5 @@
-import { neon } from '@neondatabase/serverless';
+import postgres from 'postgres';
 import { NextRequest, NextResponse } from 'next/server';
-
-export const runtime = 'edge';
 
 const PAGE_SIZE = 20;
 
@@ -13,7 +11,7 @@ export async function GET(req: NextRequest) {
   const page      = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10));
   const offset    = (page - 1) * PAGE_SIZE;
 
-  const sql = neon(process.env.DATABASE_URL!);
+  const sql = postgres(process.env.DOCTOR_DB_URL!, { ssl: 'require', prepare: false });
 
   const searchPat   = `%${search}%`;
   const specialtyPat = `%${specialty}%`;
@@ -36,6 +34,8 @@ export async function GET(req: NextRequest) {
     `,
     sql`SELECT DISTINCT specialty FROM doctors WHERE specialty IS NOT NULL ORDER BY specialty`,
   ]);
+
+  await sql.end();
 
   const total = parseInt((countRows[0] as { total: string }).total, 10);
 
