@@ -25,7 +25,9 @@ interface Doctor {
 }
 
 async function fetchDoctors(params: SearchParams) {
-  const sql = neon(process.env.DOCTOR_DB_URL!);
+  const dbUrl = process.env.DOCTOR_DB_URL;
+  if (!dbUrl) throw new Error('DOCTOR_DB_URL environment variable is not set.');
+  const sql = neon(dbUrl);
 
   const search    = params.search    ?? '';
   const specialty = params.specialty ?? '';
@@ -72,7 +74,24 @@ export default async function Home({
   searchParams: Promise<SearchParams>;
 }) {
   const params = await searchParams;
-  const { doctors, total, page, totalPages, specialties } = await fetchDoctors(params);
+
+  let data: Awaited<ReturnType<typeof fetchDoctors>>;
+  try {
+    data = await fetchDoctors(params);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="bg-red-50 border border-red-200 rounded-xl p-8 max-w-lg text-center">
+          <h2 className="text-lg font-semibold text-red-700 mb-2">Database connection error</h2>
+          <p className="text-sm text-red-600 font-mono break-all">{message}</p>
+          <p className="text-xs text-gray-500 mt-4">Check that DOCTOR_DB_URL is set correctly in Vercel → Settings → Environment Variables.</p>
+        </div>
+      </div>
+    );
+  }
+
+  const { doctors, total, page, totalPages, specialties } = data;
 
   return (
     <div className="min-h-screen bg-gray-50">
