@@ -25,7 +25,7 @@ interface Doctor {
 }
 
 async function fetchDoctors(params: SearchParams) {
-  const sql = neon(process.env.DATABASE_URL!);
+  const sql = neon(process.env.DOCTOR_DB_URL!);
 
   const search    = params.search    ?? '';
   const specialty = params.specialty ?? '';

@@ -9,7 +9,7 @@ SPIDER_MODULES = ['doctorScraping.spiders']
 NEWSPIDER_MODULE = 'doctorScraping.spiders'
 
 # Neon PostgreSQL — loaded from .env
-DATABASE_URL = os.environ.get('DATABASE_URL')
+DATABASE_URL = os.environ.get('DOCTOR_DB_URL')
 
 # Identify the bot responsibly
 USER_AGENT = 'DoctorScraper/1.0 (research project)'

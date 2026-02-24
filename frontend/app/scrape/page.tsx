@@ -5,7 +5,7 @@ import Link from 'next/link';
 
 type Status = 'idle' | 'running' | 'done' | 'error';
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL ?? '';
+const BACKEND_URL = process.env.NEXT_PUBLIC_DOCTOR_SCRAPER_URL ?? '';
 
 const SPIDERS = [
   { value: 'all',              label: 'Both sites (recommended)' },
