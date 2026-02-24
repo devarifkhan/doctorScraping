@@ -3,38 +3,47 @@
 A production-grade web scraper that collects doctor profiles from two major Bangladesh medical directories and displays them in a searchable, filterable web UI.
 
 **Data sources:**
+
 - [Doctor Bangladesh](https://www.doctorbangladesh.com) — doctors in Dhaka
 - [Ibn Sina Trust](https://www.ibnsinatrust.com) — national doctor database
 
 **Stack:**
-- Scraper: Python / Scrapy
+
+- Scraper: Python / Scrapy → deployed on **Render**
 - Database: Neon PostgreSQL (serverless)
-- UI: Next.js 16 + Tailwind CSS (deployable to Vercel)
+- UI: Next.js 16 + Tailwind CSS → deployed on **Vercel**
 
 ---
 
 ## Project Structure
 
 ```
-doctorScraping/          # Scrapy scraper
+backend/                         # Python scraper + Flask API (Render)
   doctorScraping/
-    settings.py          # Configuration (reads from .env)
-    pipelines.py         # PostgreSQL pipeline
-    items.py             # Data model
+    settings.py                  # Config (reads from .env)
+    pipelines.py                 # PostgreSQL pipeline
+    items.py                     # Data model
     spiders/
-      bddoctor_spider.py # Scraper for doctorbangladesh.com
-      ibnsina_spider.py  # Scraper for ibnsinatrust.com
-  .env.example           # Environment variable template
-  requirements.txt       # Python dependencies
-  schema.sql             # Database schema
+      bddoctor_spider.py         # Scraper for doctorbangladesh.com
+      ibnsina_spider.py          # Scraper for ibnsinatrust.com
+  server.py                      # Flask API with SSE scrape endpoint
+  run_scrapers.py                # Run all spiders locally
+  scrapy.cfg                     # Scrapy project config
+  requirements.txt               # Python dependencies
+  schema.sql                     # Database schema
+  .env.example                   # Environment variable template
 
-ui/                      # Next.js web UI
+frontend/                        # Next.js web UI (Vercel)
   app/
-    page.tsx             # Main directory page
-    api/doctors/         # REST API route
-    components/          # SearchControls, DoctorCard, Pagination
-  .env.local.example     # UI environment variable template
-  vercel.json            # Vercel deployment config
+    page.tsx                     # Doctor directory page
+    scrape/page.tsx              # Live scraper control page
+    api/doctors/route.ts         # REST API route
+    components/                  # SearchControls, DoctorCard, Pagination
+  .env.local.example             # UI environment variable template
+  vercel.json                    # Vercel deployment config
+
+render.yaml                      # Render deployment Blueprint
+README.md
 ```
 
 ---
@@ -50,20 +59,19 @@ ui/                      # Next.js web UI
 ## 1. Database Setup
 
 1. Create a free project on [neon.tech](https://neon.tech).
-2. Copy the **Connection String** from the Neon dashboard (it looks like `postgresql://user:pass@ep-xxxx.neon.tech/neondb?sslmode=require`).
+2. Copy the **Connection String** from the Neon dashboard.
 3. Run the schema to create the table (optional — the scraper does this automatically):
 
 ```bash
-psql "$DATABASE_URL" -f schema.sql
+psql "$DATABASE_URL" -f backend/schema.sql
 ```
 
 ---
 
-## 2. Scraper Setup
+## 2. Backend Setup (local)
 
 ```bash
-# Clone and enter the project
-cd doctorScraping
+cd backend
 
 # Create your environment file
 cp .env.example .env
@@ -75,70 +83,83 @@ source .venv/bin/activate      # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### Run the scrapers
+### Run the scrapers locally
 
 ```bash
-# Scrape Doctor Bangladesh (also outputs JSON)
-scrapy crawl bddoctor_spider -o bddoctor_data.json
+# From inside backend/
+scrapy crawl bddoctor_spider
+scrapy crawl ibnsina_spider
 
-# Scrape Ibn Sina Trust (also outputs JSON)
-scrapy crawl ibnsina_spider -o ibnsina_data.json
+# Or run both at once
+python run_scrapers.py
 ```
 
-Both spiders automatically insert records into Neon PostgreSQL via the pipeline. Duplicate URLs are ignored (`ON CONFLICT DO NOTHING`).
+### Run the Flask API locally
+
+```bash
+# From inside backend/
+python server.py
+# API available at http://localhost:5000
+```
 
 ---
 
-## 3. UI Setup (Local)
+## 3. Frontend Setup (local)
 
 ```bash
-cd ui
+cd frontend
 
 # Create your local environment file
 cp .env.local.example .env.local
-# Edit .env.local and set DATABASE_URL to your Neon connection string
+# Set DATABASE_URL and NEXT_PUBLIC_BACKEND_URL
 
-# Install dependencies
+# Install dependencies and start dev server
 npm install
-
-# Start the development server
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) to view the directory.
+Open [http://localhost:3000](http://localhost:3000).
 
 ---
 
-## 4. Deploy UI to Vercel
+## 4. Deploy Backend to Render
 
-1. Push the project to GitHub.
-2. Go to [vercel.com](https://vercel.com) → **New Project** → import your repo.
-3. Set the **Root Directory** to `ui`.
-4. Add the environment variable:
-   - **Name:** `DATABASE_URL`
-   - **Value:** your Neon connection string
-5. Click **Deploy**.
+1. Go to [render.com](https://render.com) → **New Web Service**
+2. Connect your GitHub repo `devarifkhan/doctorScraping`
+3. Render auto-detects `render.yaml` — confirm the settings
+4. Add environment variables in the Render dashboard:
+   - `DATABASE_URL` → your Neon connection string
+   - `ALLOWED_ORIGINS` → your Vercel URL (e.g. `https://your-app.vercel.app`)
+5. Click **Deploy** — your API URL will be `https://doctor-scraper-api.onrender.com`
 
-Your app will be live at `https://your-project.vercel.app`.
+---
+
+## 5. Deploy Frontend to Vercel
+
+1. Go to [vercel.com](https://vercel.com) → **New Project** → import your repo
+2. Set the **Root Directory** to `frontend`
+3. Add environment variables:
+   - `DATABASE_URL` → your Neon connection string
+   - `NEXT_PUBLIC_BACKEND_URL` → your Render API URL
+4. Click **Deploy**
 
 ---
 
 ## UI Features
 
-- Full-text search by doctor name or specialty
-- Filter by specialty (populated from live database)
-- Filter by data source (Doctor Bangladesh / Ibn Sina Trust)
-- Paginated results (20 per page)
+- Doctor directory with search, specialty filter, and pagination
+- **Scraper control page** (`/scrape`) — click a button to run the scrapers live and watch the output in a real-time terminal
 - Responsive card layout with doctor image, specialty, and profile link
-- Server-side rendering for fast initial load and SEO
 
 ---
 
 ## Environment Variables
 
-| Variable       | Used by        | Description                        |
-|----------------|----------------|------------------------------------|
-| `DATABASE_URL` | Scraper + UI   | Neon PostgreSQL connection string  |
+| Variable                    | Used by   | Description                                    |
+|-----------------------------|-----------|------------------------------------------------|
+| `DATABASE_URL`              | Both      | Neon PostgreSQL connection string              |
+| `NEXT_PUBLIC_BACKEND_URL`   | Frontend  | Render API URL for the scraper control page    |
+| `ALLOWED_ORIGINS`           | Backend   | Comma-separated allowed origins for CORS       |
 
 ---
 
@@ -149,10 +170,10 @@ CREATE TABLE doctors (
     id         SERIAL PRIMARY KEY,
     name       TEXT,
     specialty  TEXT,
-    url        TEXT UNIQUE,       -- deduplication key
+    url        TEXT UNIQUE,
     image_url  TEXT,
-    raw_data   TEXT,              -- chamber / appointment / address info
-    source     TEXT,              -- spider name (bddoctor_spider / ibnsina_spider)
+    raw_data   TEXT,
+    source     TEXT,
     created_at TIMESTAMP DEFAULT NOW()
 );
 ```
