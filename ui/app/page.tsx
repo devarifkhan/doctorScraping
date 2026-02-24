@@ -1,5 +1,6 @@
 import { neon } from '@neondatabase/serverless';
 import { Suspense } from 'react';
+import Link from 'next/link';
 import DoctorCard from './components/DoctorCard';
 import SearchControls from './components/SearchControls';
 import Pagination from './components/Pagination';
@@ -78,10 +79,20 @@ export default async function Home({
       {/* Header */}
       <header className="bg-white border-b border-gray-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-5 sm:px-6">
-          <h1 className="text-2xl font-bold text-gray-900">Doctor Directory Bangladesh</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            {total.toLocaleString()} doctors from Doctor Bangladesh &amp; Ibn Sina Trust
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Doctor Directory Bangladesh</h1>
+              <p className="text-sm text-gray-500 mt-1">
+                {total.toLocaleString()} doctors from Doctor Bangladesh &amp; Ibn Sina Trust
+              </p>
+            </div>
+            <Link
+              href="/scrape"
+              className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors"
+            >
+              ▶ Run Scraper
+            </Link>
+          </div>
         </div>
       </header>
 
