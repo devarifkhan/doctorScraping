@@ -4,6 +4,7 @@ import Link from 'next/link';
 import DoctorCard from './components/DoctorCard';
 import SearchControls from './components/SearchControls';
 import Pagination from './components/Pagination';
+import ClearDbButton from './components/ClearDbButton';
 
 const PAGE_SIZE = 20;
 
@@ -105,12 +106,15 @@ export default async function Home({
                 {total.toLocaleString()} doctors from Doctor Bangladesh &amp; Ibn Sina Trust
               </p>
             </div>
-            <Link
-              href="/scrape"
-              className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors"
-            >
-              ▶ Run Scraper
-            </Link>
+            <div className="flex items-center gap-3">
+              <ClearDbButton />
+              <Link
+                href="/scrape"
+                className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors"
+              >
+                ▶ Run Scraper
+              </Link>
+            </div>
           </div>
         </div>
       </header>

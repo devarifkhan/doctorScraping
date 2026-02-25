@@ -17,6 +17,7 @@ import subprocess
 import sys
 import threading
 
+import psycopg2
 from dotenv import load_dotenv
 from flask import Flask, Response, jsonify, request
 from flask_cors import CORS
@@ -28,6 +29,8 @@ app = Flask(__name__)
 CORS(
     app,
     origins=os.environ.get('ALLOWED_ORIGINS', '*'),
+    methods=['GET', 'POST', 'DELETE', 'OPTIONS'],
+    allow_headers=['Content-Type'],
     supports_credentials=False,
 )
 
@@ -71,6 +74,8 @@ def scrape_stream():
             yield 'data: [DONE]\n\n'
         return Response(bad(), mimetype='text/event-stream')
 
+    max_pages = request.args.get('max_pages', '')
+
     def generate():
         global _scraping
         with _scrape_lock:
@@ -79,8 +84,12 @@ def scrape_stream():
                 for sp in spiders:
                     yield f'data: ▶ Starting spider: {sp}\n\n'
 
+                    cmd = [sys.executable, '-u', '-m', 'scrapy', 'crawl', sp]
+                    if max_pages.isdigit() and int(max_pages) > 0:
+                        cmd += ['-s', f'CLOSESPIDER_ITEMCOUNT={max_pages}']
+
                     proc = subprocess.Popen(
-                        [sys.executable, '-u', '-m', 'scrapy', 'crawl', sp],
+                        cmd,
                         stdout=subprocess.PIPE,
                         stderr=subprocess.STDOUT,
                         text=True,
@@ -115,6 +124,25 @@ def scrape_stream():
             'X-Accel-Buffering': 'no',     # disable Nginx buffering on Render
         },
     )
+
+
+@app.route('/api/db/clear', methods=['DELETE'])
+def db_clear():
+    """Delete all rows from the doctors table."""
+    database_url = os.environ.get('DOCTOR_DB_URL')
+    if not database_url:
+        return jsonify({'error': 'Database not configured'}), 500
+    try:
+        conn = psycopg2.connect(database_url)
+        cur = conn.cursor()
+        cur.execute('DELETE FROM doctors')
+        deleted = cur.rowcount
+        conn.commit()
+        cur.close()
+        conn.close()
+        return jsonify({'deleted': deleted})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 if __name__ == '__main__':

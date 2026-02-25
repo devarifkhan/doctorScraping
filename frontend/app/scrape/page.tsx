@@ -14,11 +14,13 @@ const SPIDERS = [
 ];
 
 export default function ScrapePage() {
-  const [spider,  setSpider]  = useState('all');
-  const [status,  setStatus]  = useState<Status>('idle');
-  const [logs,    setLogs]    = useState<string[]>([]);
-  const logBoxRef             = useRef<HTMLDivElement>(null);
-  const eventSourceRef        = useRef<EventSource | null>(null);
+  const [spider,       setSpider]       = useState('all');
+  const [maxItems,     setMaxItems]     = useState('');
+  const [status,       setStatus]       = useState<Status>('idle');
+  const [logs,         setLogs]         = useState<string[]>([]);
+  const [scrapedCount, setScrapedCount] = useState(0);
+  const logBoxRef      = useRef<HTMLDivElement>(null);
+  const eventSourceRef = useRef<EventSource | null>(null);
 
   // Auto-scroll log box to bottom on new messages
   useEffect(() => {
@@ -31,9 +33,12 @@ export default function ScrapePage() {
     if (status === 'running') return;
 
     setLogs([]);
+    setScrapedCount(0);
     setStatus('running');
 
-    const url = `${BACKEND_URL}/api/scrape/stream?spider=${spider}`;
+    const params = new URLSearchParams({ spider });
+    if (maxItems && parseInt(maxItems) > 0) params.set('max_pages', maxItems);
+    const url = `${BACKEND_URL}/api/scrape/stream?${params}`;
     const es = new EventSource(url);
     eventSourceRef.current = es;
 
@@ -49,6 +54,10 @@ export default function ScrapePage() {
 
       if (msg.startsWith('[ERROR]')) {
         setStatus('error');
+      }
+
+      if (msg.includes('Scraped doctor:')) {
+        setScrapedCount((prev) => prev + 1);
       }
 
       setLogs((prev) => [...prev, msg]);
@@ -133,6 +142,39 @@ export default function ScrapePage() {
             </div>
           </div>
 
+          {/* Max items */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Max items <span className="text-gray-400 font-normal">(leave blank for unlimited)</span>
+            </label>
+            <div className="flex items-center gap-3">
+              {['', '100', '500', '1000', '3000'].map((preset) => (
+                <button
+                  key={preset}
+                  type="button"
+                  disabled={status === 'running'}
+                  onClick={() => setMaxItems(preset)}
+                  className={`px-3 py-1.5 rounded-lg border text-sm transition-colors
+                    ${maxItems === preset
+                      ? 'border-blue-500 bg-blue-50 text-blue-700 font-medium'
+                      : 'border-gray-200 hover:border-gray-300 text-gray-600'}`}
+                >
+                  {preset === '' ? 'Unlimited' : preset}
+                </button>
+              ))}
+              <input
+                type="number"
+                min="1"
+                placeholder="custom"
+                value={maxItems}
+                disabled={status === 'running'}
+                onChange={(e) => setMaxItems(e.target.value)}
+                className="w-24 px-3 py-1.5 rounded-lg border border-gray-200 text-sm text-gray-700
+                           focus:outline-none focus:border-blue-400 disabled:opacity-50"
+              />
+            </div>
+          </div>
+
           {/* Action buttons + status */}
           <div className="flex items-center gap-4">
             <button
@@ -160,6 +202,36 @@ export default function ScrapePage() {
             </div>
           </div>
         </div>
+
+        {/* Progress */}
+        {(status === 'running' || (status === 'done' && scrapedCount > 0)) && (() => {
+          const total = maxItems ? parseInt(maxItems) : 0;
+          const pct   = total > 0 ? Math.min(Math.round((scrapedCount / total) * 100), 100) : null;
+          return (
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="font-medium text-gray-700">
+                  {scrapedCount.toLocaleString()} item{scrapedCount !== 1 ? 's' : ''} scraped
+                </span>
+                {total > 0 ? (
+                  <span className="text-gray-500">
+                    {scrapedCount.toLocaleString()} / {total.toLocaleString()} &nbsp;({pct}%)
+                  </span>
+                ) : (
+                  <span className="text-gray-400 text-xs">unlimited — no target set</span>
+                )}
+              </div>
+              {total > 0 && (
+                <div className="w-full h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-blue-500 rounded-full transition-all duration-300"
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {/* Live log terminal */}
         <div className="rounded-xl overflow-hidden border border-gray-800 shadow-lg">
