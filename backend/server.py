@@ -76,17 +76,32 @@ def scrape_stream():
 
     max_pages = request.args.get('max_pages', '')
 
+    # Split the item limit evenly across spiders so the total stays at max_pages
+    total_limit = int(max_pages) if max_pages.isdigit() and int(max_pages) > 0 else 0
+    n = len(spiders)
+    per_spider_limits = []
+    if total_limit > 0:
+        base = total_limit // n
+        remainder = total_limit - base * n
+        for i in range(n):
+            per_spider_limits.append(base + (1 if i < remainder else 0))
+    else:
+        per_spider_limits = [0] * n
+
     def generate():
         global _scraping
         with _scrape_lock:
             _scraping = True
             try:
-                for sp in spiders:
+                for sp, limit in zip(spiders, per_spider_limits):
                     yield f'data: ▶ Starting spider: {sp}\n\n'
 
                     cmd = [sys.executable, '-u', '-m', 'scrapy', 'crawl', sp]
-                    if max_pages.isdigit() and int(max_pages) > 0:
-                        cmd += ['-s', f'CLOSESPIDER_ITEMCOUNT={max_pages}']
+                    if limit > 0:
+                        cmd += ['-s', f'CLOSESPIDER_ITEMCOUNT={limit}']
+                        # Reduce concurrency to 1 so in-flight overshoot is at most 1 item
+                        cmd += ['-s', 'CONCURRENT_REQUESTS=1',
+                                '-s', 'CONCURRENT_REQUESTS_PER_DOMAIN=1']
 
                     proc = subprocess.Popen(
                         cmd,
