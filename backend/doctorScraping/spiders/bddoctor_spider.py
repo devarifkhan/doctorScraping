@@ -48,8 +48,6 @@ class BddoctorSpiderSpider(scrapy.Spider):
 
         doctor_image_url = response.css('.entry-header .photo img::attr(src)').get()
 
-        self.logger.info("Scraped doctor: %s", doctor_name)
-
         item = DoctorscrapingItem()
         item['name'] = doctor_name
         item['specialty'] = doctor_specialty

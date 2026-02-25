@@ -98,8 +98,8 @@ def scrape_stream():
 
                     cmd = [sys.executable, '-u', '-m', 'scrapy', 'crawl', sp]
                     if limit > 0:
-                        cmd += ['-s', f'CLOSESPIDER_ITEMCOUNT={limit}']
-                        # Reduce concurrency to 1 so in-flight overshoot is at most 1 item
+                        # CONCURRENT_REQUESTS=1 ensures each item is fully committed
+                        # before the next download starts, so our manual kill is precise
                         cmd += ['-s', 'CONCURRENT_REQUESTS=1',
                                 '-s', 'CONCURRENT_REQUESTS_PER_DOMAIN=1']
 
@@ -109,17 +109,36 @@ def scrape_stream():
                         stderr=subprocess.STDOUT,
                         text=True,
                         bufsize=1,
-                        env={**os.environ, 'PYTHONUNBUFFERED': '1'},
+                        env={
+                            **os.environ,
+                            'PYTHONUNBUFFERED': '1',
+                            'SCRAPY_ITEM_LIMIT': str(limit) if limit > 0 else '0',
+                        },
                     )
 
+                    item_count = 0
+                    limit_hit = False
                     for line in proc.stdout:
                         stripped = line.rstrip()
                         if stripped:
                             yield f'data: {stripped}\n\n'
+                        if 'Scraped doctor' in stripped:
+                            item_count += 1
+                            if limit > 0 and item_count >= limit:
+                                proc.terminate()
+                                limit_hit = True
+                                break
 
+                    # Drain remaining output so the subprocess can exit cleanly
+                    try:
+                        proc.stdout.read()
+                    except Exception:
+                        pass
                     proc.wait()
 
-                    if proc.returncode == 0:
+                    if limit_hit:
+                        yield f'data: ✓ {sp} finished successfully\n\n'
+                    elif proc.returncode == 0:
                         yield f'data: ✓ {sp} finished successfully\n\n'
                     else:
                         yield f'data: ✗ {sp} exited with code {proc.returncode}\n\n'

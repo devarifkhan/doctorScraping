@@ -45,8 +45,6 @@ class IbnsinaSpiderSpider(scrapy.Spider):
         designation = designation.strip()
         institute = institute.strip()
 
-        self.logger.info("Scraped doctor: %s", name)
-
         item = DoctorscrapingItem()
         item['name'] = name
         item['specialty'] = specialty
